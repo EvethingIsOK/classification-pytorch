@@ -28,12 +28,11 @@ if __name__ == "__main__":
             if type_name not in classes:
                 continue
             cls_id = classes.index(type_name)
-            
             photos_path = os.path.join(datasets_path_t, type_name)
             photos_name = os.listdir(photos_path)
             for photo_name in photos_name:
                 _, postfix = os.path.splitext(photo_name)
-                if postfix not in ['.jpg', '.png', '.jpeg']:
+                if postfix not in ['.jpg', '.png', '.jpeg','.JPG']:
                     continue
                 list_file.write(str(cls_id) + ";" + '%s'%(os.path.join(photos_path, photo_name)))
                 list_file.write('\n')

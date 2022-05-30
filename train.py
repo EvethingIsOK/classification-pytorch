@@ -41,7 +41,7 @@ if __name__ == "__main__":
     #   fp16        是否使用混合精度训练
     #               可减少约一半的显存、需要pytorch1.7.1以上
     #---------------------------------------------------------------------#
-    fp16            = False
+    fp16            = True
     #----------------------------------------------------#
     #   训练自己的数据集的时候一定要注意修改classes_path
     #   修改成自己对应的种类的txt
@@ -55,14 +55,14 @@ if __name__ == "__main__":
     #   所用模型种类：
     #   mobilenet、resnet50、vgg16、vit
     #------------------------------------------------------#
-    backbone        = "mobilenet"
+    backbone        = "resnet50"
     #----------------------------------------------------------------------------------------------------------------------------#
     #   是否使用主干网络的预训练权重，此处使用的是主干的权重，因此是在模型构建的时候进行加载的。
     #   如果设置了model_path，则主干的权值无需加载，pretrained的值无意义。
     #   如果不设置model_path，pretrained = True，此时仅加载主干开始训练。
     #   如果不设置model_path，pretrained = False，Freeze_Train = Fasle，此时从0开始训练，且没有冻结主干的过程。
     #----------------------------------------------------------------------------------------------------------------------------#
-    pretrained      = True
+    pretrained      = False
     #----------------------------------------------------------------------------------------------------------------------------#
     #   权值文件的下载请看README，可以通过网盘下载。模型的 预训练权重 对不同数据集是通用的，因为特征是通用的。
     #   模型的 预训练权重 比较重要的部分是 主干特征提取网络的权值部分，用于进行特征提取。
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     #   如果想要让模型从主干的预训练权值开始训练，则设置model_path = ''，pretrain = True，此时仅加载主干。
     #   如果想要让模型从0开始训练，则设置model_path = ''，pretrain = Fasle，此时从0开始训练。
     #----------------------------------------------------------------------------------------------------------------------------#
-    model_path      = ""
+    model_path      = "model_data/resnet50-19c8e357.pth"
         
     #----------------------------------------------------------------------------------------------------------------------------#
     #   训练分为两个阶段，分别是冻结阶段和解冻阶段。设置冻结阶段是为了满足机器性能不足的同学的训练需求。
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------#
     Init_Epoch          = 0
     Freeze_Epoch        = 50
-    Freeze_batch_size   = 32
+    Freeze_batch_size   = 16
     #------------------------------------------------------------------#
     #   解冻阶段训练参数
     #   此时模型的主干不被冻结了，特征提取网络会发生改变
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     #   Unfreeze_batch_size     模型在解冻后的batch_size
     #------------------------------------------------------------------#
     UnFreeze_Epoch      = 200
-    Unfreeze_batch_size = 32
+    Unfreeze_batch_size = 8
     #------------------------------------------------------------------#
     #   Freeze_Train    是否进行冻结训练
     #                   默认先冻结主干训练后解冻训练。
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     #                   当使用SGD优化器时建议设置   Init_lr=1e-2
     #   Min_lr          模型的最小学习率，默认为最大学习率的0.01
     #------------------------------------------------------------------#
-    Init_lr             = 1e-2
+    Init_lr             = 1e-3
     Min_lr              = Init_lr * 0.01
     #------------------------------------------------------------------#
     #   optimizer_type  使用到的优化器种类，可选的有adam、sgd
@@ -153,9 +153,9 @@ if __name__ == "__main__":
     #   weight_decay    权值衰减，可防止过拟合
     #                   使用adam优化器时会有错误，建议设置为0
     #------------------------------------------------------------------#
-    optimizer_type      = "sgd"
+    optimizer_type      = "adamw"
     momentum            = 0.9
-    weight_decay        = 5e-4
+    weight_decay        = 5e-3
     #------------------------------------------------------------------#
     #   lr_decay_type   使用到的学习率下降方式，可选的有step、cos
     #------------------------------------------------------------------#
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------#
     #   save_period     多少个epoch保存一次权值
     #------------------------------------------------------------------#
-    save_period         = 10
+    save_period         = 5
     #------------------------------------------------------------------#
     #   save_dir        权值与日志文件保存的文件夹
     #------------------------------------------------------------------#
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     #                   开启后会加快数据读取速度，但是会占用更多内存
     #                   内存较小的电脑可以设置为2或者0  
     #------------------------------------------------------------------#
-    num_workers         = 4
+    num_workers         = 2
 
     #------------------------------------------------------#
     #   train_annotation_path   训练图片路径和标签
@@ -348,19 +348,30 @@ if __name__ == "__main__":
         #   判断当前batch_size，自适应调整学习率
         #-------------------------------------------------------------------#
         nbs             = 64
-        lr_limit_max    = 1e-3 if optimizer_type == 'adam' else 1e-1
-        lr_limit_min    = 1e-4 if optimizer_type == 'adam' else 5e-4
+        lr_limit_max    = 1e-3 if optimizer_type == ['adam', 'adamw'] else 1e-1
+        lr_limit_min    = 1e-4 if optimizer_type == ['adam', 'adamw'] else 5e-4
         if backbone == 'vit':
             nbs             = 256
-            lr_limit_max    = 1e-3 if optimizer_type == 'adam' else 1e-1
-            lr_limit_min    = 1e-5 if optimizer_type == 'adam' else 5e-4
+            lr_limit_max    = 1e-3 if optimizer_type == ['adam', 'adamw'] else 1e-1
+            lr_limit_min    = 1e-5 if optimizer_type == ['adam', 'adamw'] else 5e-4
         Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
         Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
-        
+
+        pg0, pg1, pg2 = [], [], []
+        for k, v in model.named_modules():
+            if hasattr(v, "bias") and isinstance(v.bias, nn.Parameter):
+                pg2.append(v.bias)
+            if isinstance(v, nn.BatchNorm2d) or "bn" in k:
+                pg0.append(v.weight)
+            elif hasattr(v, "weight") and isinstance(v.weight, nn.Parameter):
+                pg1.append(v.weight)
         optimizer = {
             'adam'  : optim.Adam(model_train.parameters(), Init_lr_fit, betas = (momentum, 0.999), weight_decay=weight_decay),
+            'adamw': optim.AdamW(pg0, Init_lr_fit, betas=(momentum, 0.999)),
             'sgd'   : optim.SGD(model_train.parameters(), Init_lr_fit, momentum = momentum, nesterov=True)
         }[optimizer_type]
+        optimizer.add_param_group({"params": pg1, "weight_decay": weight_decay})
+        optimizer.add_param_group({"params": pg2})
         
         #---------------------------------------#
         #   获得学习率下降的公式
@@ -408,12 +419,12 @@ if __name__ == "__main__":
                 #   判断当前batch_size，自适应调整学习率
                 #-------------------------------------------------------------------#
                 nbs             = 64
-                lr_limit_max    = 1e-3 if optimizer_type == 'adam' else 1e-1
-                lr_limit_min    = 1e-4 if optimizer_type == 'adam' else 5e-4
+                lr_limit_max    = 1e-3 if optimizer_type == ['adam', 'adamw'] else 1e-1
+                lr_limit_min    = 1e-4 if optimizer_type == ['adam', 'adamw'] else 5e-4
                 if backbone == 'vit':
                     nbs             = 256
-                    lr_limit_max    = 1e-3 if optimizer_type == 'adam' else 1e-1
-                    lr_limit_min    = 1e-5 if optimizer_type == 'adam' else 5e-4
+                    lr_limit_max    = 1e-3 if optimizer_type == ['adam', 'adamw'] else 1e-1
+                    lr_limit_min    = 1e-5 if optimizer_type == ['adam', 'adamw'] else 5e-4
                 Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
                 Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
                 #---------------------------------------#
