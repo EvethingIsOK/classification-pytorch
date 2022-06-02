@@ -68,3 +68,32 @@ class LossHistory():
 
         plt.cla()
         plt.close("all")
+
+    #--------------------------------#
+    #   断点重连拼凑loss图
+    #   尝试中
+    #--------------------------------#
+    if __name__ == '__main__':
+
+
+
+
+        losses = []
+        val_loss = []
+        log_dir    = os.path.join('E:\code\classification-pytorch\classification-pytorch\logs', "concat" )
+        with open(os.path.join(log_dir, "epoch_loss.txt"), 'r') as f:
+            lines=f.readlines()
+            for line in lines:
+                loss=line.strip()
+                losses.append(loss)
+                # print(line.strip())
+        print(losses)
+        with open(os.path.join(log_dir, "epoch_val_loss.txt"), 'r') as f:
+            lines=f.readlines()
+            for line in lines:
+                val=line.strip()
+                val_loss.append(val)
+                # print(line.strip())
+        print(val_loss)
+
+        loss_plot()

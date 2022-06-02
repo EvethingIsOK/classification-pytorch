@@ -77,7 +77,7 @@ if __name__ == "__main__":
     #   如果想要让模型从主干的预训练权值开始训练，则设置model_path = ''，pretrain = True，此时仅加载主干。
     #   如果想要让模型从0开始训练，则设置model_path = ''，pretrain = Fasle，此时从0开始训练。
     #----------------------------------------------------------------------------------------------------------------------------#
-    model_path      = "model_data/resnet50-19c8e357.pth"
+    model_path      = "logs/ep115-loss0.212-val_loss0.944.pth"
         
     #----------------------------------------------------------------------------------------------------------------------------#
     #   训练分为两个阶段，分别是冻结阶段和解冻阶段。设置冻结阶段是为了满足机器性能不足的同学的训练需求。
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     #   Freeze_batch_size   模型冻结训练的batch_size
     #                       (当Freeze_Train=False时失效)
     #------------------------------------------------------------------#
-    Init_Epoch          = 0
+    Init_Epoch          = 115
     Freeze_Epoch        = 50
     Freeze_batch_size   = 16
     #------------------------------------------------------------------#
@@ -361,14 +361,16 @@ if __name__ == "__main__":
         for k, v in model.named_modules():
             if hasattr(v, "bias") and isinstance(v.bias, nn.Parameter):
                 pg2.append(v.bias)
-            if isinstance(v, nn.BatchNorm2d) or "bn" in k:
+            if isinstance(v, nn.BatchNorm2d) or isinstance(v,nn.LayerNorm) or "ln" in k or "bn" in k:
                 pg0.append(v.weight)
+                if isinstance(v,nn.LayerNorm) or "ln" in k:
+                    print('ln----------------------------')
             elif hasattr(v, "weight") and isinstance(v.weight, nn.Parameter):
                 pg1.append(v.weight)
         optimizer = {
-            'adam'  : optim.Adam(model_train.parameters(), Init_lr_fit, betas = (momentum, 0.999), weight_decay=weight_decay),
+            'adam'  : optim.Adam(pg0, Init_lr_fit, betas = (momentum, 0.999), weight_decay=weight_decay),
             'adamw': optim.AdamW(pg0, Init_lr_fit, betas=(momentum, 0.999)),
-            'sgd'   : optim.SGD(model_train.parameters(), Init_lr_fit, momentum = momentum, nesterov=True)
+            'sgd'   : optim.SGD(pg0, Init_lr_fit, momentum = momentum, nesterov=True)
         }[optimizer_type]
         optimizer.add_param_group({"params": pg1, "weight_decay": weight_decay})
         optimizer.add_param_group({"params": pg2})
@@ -459,3 +461,4 @@ if __name__ == "__main__":
 
         if local_rank == 0:
             loss_history.writer.close()
+

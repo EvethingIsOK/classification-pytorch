@@ -221,6 +221,7 @@ class VisionTransformer(nn.Module):
     
 def vit(input_shape=[224, 224], pretrained=False, num_classes=1000):
     model = VisionTransformer(input_shape)
+    print('vit_inputshape:',input_shape)
     if pretrained:
         model.load_state_dict(torch.load("model_data/vit-patch_16.pth"))
 
