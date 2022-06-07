@@ -138,7 +138,7 @@ def download_weights(backbone, model_dir="./model_data"):
     
     download_urls = {
         'vgg16'         : 'https://download.pytorch.org/models/vgg16-397923af.pth',
-        'mobilenet'     : 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
+        'mobilenet_v2'     : 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
         'resnet50'      : 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
         'vit'           : 'https://github.com/bubbliiiing/classification-pytorch/releases/download/v1.0/vit-patch_16.pth'
     }
