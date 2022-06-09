@@ -53,9 +53,9 @@ if __name__ == "__main__":
     input_shape     = [224, 224]
     #------------------------------------------------------#
     #   所用模型种类：
-    #   mobilenet_v1、mobilenet_v2、resnet50、vgg16、vit
+    #   ghostnet、mobilenet_v1、mobilenet_v2、resnet50、vgg16、vit
     #------------------------------------------------------#
-    backbone        = "mobilenet_v1"
+    backbone        = "ghostnet"
     #----------------------------------------------------------------------------------------------------------------------------#
     #   是否使用主干网络的预训练权重，此处使用的是主干的权重，因此是在模型构建的时候进行加载的。
     #   如果设置了model_path，则主干的权值无需加载，pretrained的值无意义。
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     #   如果想要让模型从主干的预训练权值开始训练，则设置model_path = ''，pretrain = True，此时仅加载主干。
     #   如果想要让模型从0开始训练，则设置model_path = ''，pretrain = Fasle，此时从0开始训练。
     #----------------------------------------------------------------------------------------------------------------------------#
-    model_path      = "model_data/vit-patch_16.pth"
+    model_path      = "model_data/ghostnet_weights.pth"
         
     #----------------------------------------------------------------------------------------------------------------------------#
     #   训练分为两个阶段，分别是冻结阶段和解冻阶段。设置冻结阶段是为了满足机器性能不足的同学的训练需求。
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------#
     Init_Epoch          = 0
     Freeze_Epoch        = 50
-    Freeze_batch_size   = 8
+    Freeze_batch_size   = 4
     #------------------------------------------------------------------#
     #   解冻阶段训练参数
     #   此时模型的主干不被冻结了，特征提取网络会发生改变
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     #                   当使用SGD优化器时建议设置   Init_lr=1e-2
     #   Min_lr          模型的最小学习率，默认为最大学习率的0.01
     #------------------------------------------------------------------#
-    Init_lr             = 1e-4
+    Init_lr             = 1e-3
     Min_lr              = Init_lr * 0.01
     #------------------------------------------------------------------#
     #   optimizer_type  使用到的优化器种类，可选的有adam、sgd
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     #                   开启后会加快数据读取速度，但是会占用更多内存
     #                   内存较小的电脑可以设置为2或者0  
     #------------------------------------------------------------------#
-    num_workers         = 4
+    num_workers         = 2
 
     #------------------------------------------------------#
     #   train_annotation_path   训练图片路径和标签
@@ -214,8 +214,9 @@ if __name__ == "__main__":
     #   获取classes
     #------------------------------------------------------#
     class_names, num_classes = get_classes(classes_path)
-
-    if backbone != "vit":
+    if backbone == "ghostnet":
+        model = get_model_from_name[backbone](num_classes = num_classes)
+    elif backbone != "vit" and backbone!="ghostnet":
         model = get_model_from_name[backbone](num_classes = num_classes, pretrained = pretrained)
     else:
         model = get_model_from_name[backbone](input_shape = input_shape, num_classes = num_classes, pretrained = pretrained)

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['ghost_net']
+# __all__ = ['ghost_net']
 
 def _make_divisible(v, divisor, min_value=None):
     if min_value is None:
@@ -191,10 +191,23 @@ class GhostNet(nn.Module):
         return x
 
 
-def ghostnet(**kwargs):
+    def freeze_backbone(self):
+        backbone = [self.conv_stem, self.bn1, self.blocks,self.conv_head]
+        for module in backbone:
+            for param in module.parameters():
+                param.requires_grad = False
+
+    def Unfreeze_backbone(self):
+        backbone = [self.conv_stem, self.bn1, self.blocks,self.conv_head]
+        for module in backbone:
+            for param in module.parameters():
+                param.requires_grad = True
+
+def ghostnet(num_classes=1000,**kwargs):
     """
     Constructs a GhostNet model
     """
+
     cfgs = [
         # k, t, c, SE, s 
         # stage1
@@ -221,7 +234,10 @@ def ghostnet(**kwargs):
          [5, 960, 160, 0.25, 1]
         ]
     ]
-    return GhostNet(cfgs, **kwargs)
+    model = GhostNet(cfgs, **kwargs)
+    if num_classes!=1000:
+        model.classifier=nn.Linear(1280, num_classes)
+    return model
 
 
 if __name__ == "__main__":
